@@ -1,0 +1,47 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@theme {
+  --color-primary: #1a0a2e;
+  --color-secondary: #2d1b4e;
+  --color-accent: #d4af37;
+  --color-accent-light: #f0d060;
+  --color-surface: #16102b;
+  --color-surface-light: #241b3d;
+  --color-text-primary: #e8dcc8;
+  --color-text-secondary: #a89b8c;
+  --color-text-accent: #d4af37;
+
+  --color-gryffindor: #740001;
+  --color-gryffindor-light: #D3A625;
+  --color-hufflepuff: #ECB939;
+  --color-hufflepuff-dark: #372E29;
+  --color-ravenclaw: #0E1A40;
+  --color-ravenclaw-light: #946B2D;
+  --color-slytherin: #1A472A;
+  --color-slytherin-light: #5D5D5D;
+
+  --font-heading: 'Cinzel', serif;
+  --font-body: 'Inter', sans-serif;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--color-primary);
+  color: var(--color-text-primary);
+  min-height: 100vh;
+  margin: 0;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--color-primary); }
+::-webkit-scrollbar-thumb { background: var(--color-accent); border-radius: 3px; }
