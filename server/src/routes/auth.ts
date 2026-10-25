@@ -162,4 +162,67 @@ router.get('/me', authMiddleware, (req: AuthRequest, res: Response): void => {
   }
 });
 
+// POST /api/auth/verify-email (For password recovery step 1)
+router.post('/verify-email', (req: AuthRequest, res: Response): void => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      res.status(400).json({ error: 'Email address is required' });
+      return;
+    }
+
+    const db = getDb();
+    const stmt = db.prepare('SELECT id, username FROM users WHERE email = ?');
+    stmt.bind([email]);
+    if (!stmt.step()) {
+      stmt.free();
+      res.status(404).json({ error: 'No wizard found with this owl mail address.' });
+      return;
+    }
+    const user = stmt.getAsObject() as { id: number; username: string };
+    stmt.free();
+
+    res.json({ success: true, username: user.username });
+  } catch (err: any) {
+    console.error('[Auth] Verify email error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/auth/reset-password
+router.post('/reset-password', async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { email, newPassword } = req.body;
+
+    if (!email || !newPassword) {
+      res.status(400).json({ error: 'Email and new password are required' });
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      res.status(400).json({ error: 'New password must be at least 6 characters' });
+      return;
+    }
+
+    const db = getDb();
+    const stmt = db.prepare('SELECT id FROM users WHERE email = ?');
+    stmt.bind([email]);
+    if (!stmt.step()) {
+      stmt.free();
+      res.status(404).json({ error: 'No wizard found with this owl mail address.' });
+      return;
+    }
+    stmt.free();
+
+    const newHash = await bcrypt.hash(newPassword, 10);
+    db.run('UPDATE users SET password_hash = ? WHERE email = ?', [newHash, email]);
+    saveDb();
+
+    res.json({ success: true, message: 'Password has been recast successfully! Please log in.' });
+  } catch (err: any) {
+    console.error('[Auth] Reset password error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router;

@@ -38,6 +38,10 @@ export const auth = {
   login: (email: string, password: string) =>
     api.post('/auth/login', { email, password }),
   me: () => api.get('/auth/me'),
+  verifyEmail: (email: string) =>
+    api.post('/auth/verify-email', { email }),
+  resetPassword: (email: string, newPassword: string) =>
+    api.post('/auth/reset-password', { email, newPassword }),
 };
 
 // Sorting endpoints
