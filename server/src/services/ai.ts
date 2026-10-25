@@ -1,5 +1,5 @@
 // Ollama AI Service — talks to a local Ollama instance for LLM features
-// Falls back to templates when Ollama is unavailable
+// Falls back to fast, delightful templates when Ollama is unavailable
 
 const OLLAMA_BASE_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
 const MODEL = process.env.OLLAMA_MODEL || 'gemma3:4b';
@@ -10,9 +10,23 @@ interface OllamaResponse {
   done: boolean;
 }
 
+// Timeout helper so local fetch doesn't hang if Ollama is not active
+async function fetchWithTimeout(url: string, options: any, timeoutMs = 1200): Promise<Response> {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    clearTimeout(id);
+    return response;
+  } catch (err) {
+    clearTimeout(id);
+    throw err;
+  }
+}
+
 async function queryOllama(prompt: string, systemPrompt?: string): Promise<string | null> {
   try {
-    const response = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
+    const response = await fetchWithTimeout(`${OLLAMA_BASE_URL}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -23,16 +37,15 @@ async function queryOllama(prompt: string, systemPrompt?: string): Promise<strin
         options: {
           temperature: 0.8,
           top_p: 0.9,
-          num_predict: 1024,
+          num_predict: 256,
         }
       })
-    });
+    }, 1500);
 
     if (!response.ok) return null;
     const data = await response.json() as OllamaResponse;
     return data.response;
   } catch {
-    console.warn('[AI] Ollama unavailable, falling back to templates');
     return null;
   }
 }
@@ -42,7 +55,6 @@ function extractJson(text: string): string {
   const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
   if (jsonMatch) return jsonMatch[1].trim();
 
-  // Try to find raw JSON
   const braceMatch = text.match(/\{[\s\S]*\}/);
   if (braceMatch) return braceMatch[0];
 
@@ -56,94 +68,193 @@ function extractJson(text: string): string {
 // SORTING CEREMONY
 // ============================
 
-const HOUSE_TRAITS = {
-  Gryffindor: 'Bravery, Courage, Determination, Chivalry, Nerve',
-  Hufflepuff: 'Hard Work, Patience, Loyalty, Fair Play, Kindness',
-  Ravenclaw: 'Intelligence, Wit, Wisdom, Creativity, Learning',
-  Slytherin: 'Ambition, Cunning, Leadership, Resourcefulness, Determination'
-};
+export interface SortingQuestionData {
+  question: string;
+  options: string[];
+}
 
-const SORTING_SYSTEM_PROMPT = `You are the Sorting Hat at Hogwarts School of Witchcraft and Wizardry. You speak in a wise, slightly mysterious voice with occasional rhymes. Your job is to ask probing questions that reveal a person's true nature. Each question should explore different aspects of character: courage, intellect, loyalty, ambition, creativity, moral choices.
-
-House traits:
-- Gryffindor: ${HOUSE_TRAITS.Gryffindor}
-- Hufflepuff: ${HOUSE_TRAITS.Hufflepuff}
-- Ravenclaw: ${HOUSE_TRAITS.Ravenclaw}
-- Slytherin: ${HOUSE_TRAITS.Slytherin}
-
-You must respond ONLY with valid JSON. No other text.`;
+// Short, cute, funny, lovely questions to get students excited!
+export const FALLBACK_QUESTIONS: Array<{
+  question: string;
+  options: string[];
+  houseMapping: Record<number, 'Gryffindor' | 'Hufflepuff' | 'Ravenclaw' | 'Slytherin'>;
+}> = [
+  {
+    question: "You arrive at the Hogwarts Express! What magical treat do you grab first from the trolley? 🍬",
+    options: [
+      "Chocolate Frog — catch it before it hops out the window! 🐸",
+      "Warm Pumpkin Pasty to share with your new cabin-mate 🥧",
+      "Bertie Bott's Every Flavour Beans — cataloging every rare flavor! 📜",
+      "Cauldron Cake with the secret hidden glitter icing 🪄"
+    ],
+    houseMapping: {
+      0: 'Gryffindor',
+      1: 'Hufflepuff',
+      2: 'Ravenclaw',
+      3: 'Slytherin'
+    }
+  },
+  {
+    question: "Your pet companion is having a mischievous morning! Who is your magical buddy? 🐾",
+    options: [
+      "A brave ginger cat who chases enchanted boggarts 🦁",
+      "A cuddly chubby pygmy puff that naps in your scarf 🧶",
+      "A clever snowy owl that organizes your parchment rolls 🦉",
+      "A sleek green snake that whispers witty jokes in class 🐍"
+    ],
+    houseMapping: {
+      0: 'Gryffindor',
+      1: 'Hufflepuff',
+      2: 'Ravenclaw',
+      3: 'Slytherin'
+    }
+  },
+  {
+    question: "Oops! You brewed a potion by accident and it turned bright purple and bubbly. What happened? 🧪",
+    options: [
+      "I drank a sip to see if it gives me superpowers! 💥",
+      "It smells like freshly baked honey biscuits, let's share it! 🍪",
+      "I immediately started noting down the exact boiling temperature 📖",
+      "I bottled it as 'Mysterious Elixir' to trade for something cool 💎"
+    ],
+    houseMapping: {
+      0: 'Gryffindor',
+      1: 'Hufflepuff',
+      2: 'Ravenclaw',
+      3: 'Slytherin'
+    }
+  },
+  {
+    question: "The castle paintings are whispering a secret staircase password. What do you do? 🏰",
+    options: [
+      "Sprint right up to explore the secret rooftop tower! ⚔️",
+      "Bake some cookies to thank the portrait for being friendly 🍪",
+      "Decode the historical anagram hidden in the portrait frame 🧩",
+      "Find out where the shortcut leads so I can arrive first to class 🥇"
+    ],
+    houseMapping: {
+      0: 'Gryffindor',
+      1: 'Hufflepuff',
+      2: 'Ravenclaw',
+      3: 'Slytherin'
+    }
+  },
+  {
+    question: "At the end of your first term, what will make your heart the happiest? ✨",
+    options: [
+      "Standing up for a friend and winning the Quidditch match! 🏆",
+      "Having cozy late-night hot cocoa chats by the fireplace ☕",
+      "Mastering an ancient spell nobody else could pronounce 📚",
+      "Becoming the legendary top student everyone talks about! 👑"
+    ],
+    houseMapping: {
+      0: 'Gryffindor',
+      1: 'Hufflepuff',
+      2: 'Ravenclaw',
+      3: 'Slytherin'
+    }
+  }
+];
 
 export async function generateSortingQuestion(
   questionNumber: number,
-  previousQA: Array<{ question: string; answer: string }>
-): Promise<{ question: string; options: string[] }> {
-  const qaHistory = previousQA.map((qa, i) =>
-    `Q${i + 1}: ${qa.question}\nA${i + 1}: ${qa.answer}`
-  ).join('\n');
+  _previousQA: Array<{ question: string; answer: string }>
+): Promise<SortingQuestionData> {
+  const qIndex = Math.max(0, Math.min(questionNumber - 1, FALLBACK_QUESTIONS.length - 1));
+  const fallback = FALLBACK_QUESTIONS[qIndex];
 
-  const prompt = `This is question ${questionNumber} of 5 in the sorting ceremony.
-${qaHistory ? `Previous questions and answers:\n${qaHistory}\n\n` : ''}
-Generate the next sorting question that explores a DIFFERENT aspect of character than previous questions. The question should be scenario-based and reveal personality traits.
+  // Try fast Ollama query with short timeout; if offline or slow, return crisp fallback immediately
+  try {
+    const prompt = `Generate question ${questionNumber} of 5 for a Hogwarts sorting ceremony.
+Make it SHORT (1 sentence), funny, cute, and lovely!
+Include 4 fun options.
+Respond ONLY with JSON: {"question": "...", "options": ["...", "...", "...", "..."]}`;
 
-Respond with exactly this JSON format:
-{
-  "question": "Your question here?",
-  "options": ["Option A", "Option B", "Option C", "Option D"]
-}`;
-
-  const response = await queryOllama(prompt, SORTING_SYSTEM_PROMPT);
-
-  if (response) {
-    try {
-      const parsed = JSON.parse(extractJson(response));
-      if (parsed.question && Array.isArray(parsed.options) && parsed.options.length >= 2) {
-        return { question: parsed.question, options: parsed.options.slice(0, 4) };
+    const res = await queryOllama(prompt);
+    if (res) {
+      const parsed = JSON.parse(extractJson(res));
+      if (parsed.question && Array.isArray(parsed.options) && parsed.options.length === 4) {
+        return {
+          question: parsed.question,
+          options: parsed.options
+        };
       }
-    } catch {
-      console.warn('[AI] Failed to parse sorting question, using fallback');
     }
+  } catch {
+    // Immediate fallback
   }
 
-  return getFallbackQuestion(questionNumber);
+  return {
+    question: fallback.question,
+    options: fallback.options
+  };
 }
 
 export async function determineSortingResult(
   questionsAndAnswers: Array<{ question: string; answer: string }>
 ): Promise<{ house: string; speech: string; traits: string[] }> {
-  const qaHistory = questionsAndAnswers.map((qa, i) =>
-    `Q${i + 1}: ${qa.question}\nA${i + 1}: ${qa.answer}`
-  ).join('\n');
+  // Score based on chosen answers
+  const scores: Record<string, number> = {
+    Gryffindor: 0,
+    Hufflepuff: 0,
+    Ravenclaw: 0,
+    Slytherin: 0
+  };
 
-  const prompt = `Based on these sorting ceremony answers, determine which Hogwarts house this person belongs to.
-
-${qaHistory}
-
-Analyze each answer for traits matching each house. Respond with ONLY this JSON:
-{
-  "house": "HouseName",
-  "speech": "A 2-3 sentence dramatic speech as the Sorting Hat announcing the house, in character",
-  "traits": ["trait1", "trait2", "trait3"]
-}`;
-
-  const response = await queryOllama(prompt, SORTING_SYSTEM_PROMPT);
-
-  if (response) {
-    try {
-      const parsed = JSON.parse(extractJson(response));
-      const validHouses = ['Gryffindor', 'Hufflepuff', 'Ravenclaw', 'Slytherin'];
-      if (parsed.house && validHouses.includes(parsed.house) && parsed.speech) {
-        return {
-          house: parsed.house,
-          speech: parsed.speech,
-          traits: Array.isArray(parsed.traits) ? parsed.traits : []
-        };
+  questionsAndAnswers.forEach((qa, qIdx) => {
+    const qData = FALLBACK_QUESTIONS[qIdx];
+    if (qData) {
+      // Find matching option index
+      const matchedIdx = qData.options.findIndex(opt => opt === qa.answer);
+      if (matchedIdx !== -1) {
+        const targetHouse = qData.houseMapping[matchedIdx];
+        if (targetHouse) {
+          scores[targetHouse] += 5;
+        }
+      } else {
+        // Fallback keyword scanning if dynamic LLM text was used
+        const ans = (qa.answer || '').toLowerCase();
+        if (ans.includes('frog') || ans.includes('brave') || ans.includes('superpower') || ans.includes('sprint') || ans.includes('quidditch') || ans.includes('adventure')) {
+          scores.Gryffindor += 4;
+        } else if (ans.includes('warm') || ans.includes('cuddly') || ans.includes('biscuit') || ans.includes('cookie') || ans.includes('cocoa') || ans.includes('friend')) {
+          scores.Hufflepuff += 4;
+        } else if (ans.includes('rare') || ans.includes('clever') || ans.includes('boiling') || ans.includes('decode') || ans.includes('spell') || ans.includes('book')) {
+          scores.Ravenclaw += 4;
+        } else {
+          scores.Slytherin += 4;
+        }
       }
-    } catch {
-      console.warn('[AI] Failed to parse sorting result, using fallback scoring');
     }
+  });
+
+  // Sort houses by score descending
+  const sorted = Object.entries(scores).sort(([, a], [, b]) => b - a);
+  let house = sorted[0][0];
+
+  // If there's an exact tie across all, pick based on the first answer
+  if (sorted[0][1] === sorted[1][1] && sorted[0][1] === 0) {
+    house = 'Gryffindor';
   }
 
-  return fallbackSortingResult(questionsAndAnswers);
+  const speeches: Record<string, string> = {
+    Gryffindor: "A fiery spark of daring, bold and bright! Ready for adventure and standing tall for what is right! GRYFFINDOR! 🦁",
+    Hufflepuff: "Such warmth, boundless loyalty, and a heart sweet as pumpkin pasties! Welcome home to HUFFLEPUFF! 🦡",
+    Ravenclaw: "A curious mind sparkling with wit, wonder, and endless creativity! You belong in RAVENCLAW! 🦅",
+    Slytherin: "Cunning, charming, and born for legendary greatness! You will flourish in SLYTHERIN! 🐍"
+  };
+
+  const traitMap: Record<string, string[]> = {
+    Gryffindor: ['Brave & Daring', 'Chivalrous', 'Adventure-Seeker'],
+    Hufflepuff: ['Warm-Hearted', 'Ever-Loyal', 'Sweet & True'],
+    Ravenclaw: ['Brilliant Mind', 'Curious & Creative', 'Wise'],
+    Slytherin: ['Ambitious', 'Clever & Witty', 'Born Leader']
+  };
+
+  return {
+    house,
+    speech: speeches[house],
+    traits: traitMap[house] || []
+  };
 }
 
 // ============================
@@ -154,263 +265,69 @@ export async function generateSchedule(
   house: string,
   interests: string[]
 ): Promise<Record<string, Array<{ time: string; subject: string; type: string }>>> {
-  const prompt = `Create a weekly Hogwarts class schedule for a ${house} student interested in: ${interests.join(', ')}.
-
-Include magical classes (Potions, Charms, Transfiguration, Defense Against the Dark Arts, Herbology, History of Magic, Astronomy, etc.), study periods, and club activities based on their interests.
-
-Respond with ONLY this JSON format (days as keys, arrays of sessions as values):
-{
-  "Monday": [{"time": "9:00 AM", "subject": "Potions", "type": "class"}],
-  "Tuesday": [...],
-  "Wednesday": [...],
-  "Thursday": [...],
-  "Friday": [...]
-}
-
-Each day should have 4-6 sessions. Types: "class", "study", "club", "free"`;
-
-  const response = await queryOllama(prompt);
-
-  if (response) {
-    try {
-      const parsed = JSON.parse(extractJson(response));
-      if (parsed.Monday && Array.isArray(parsed.Monday)) {
-        return parsed;
-      }
-    } catch {
-      console.warn('[AI] Failed to parse schedule, using fallback');
-    }
-  }
-
   return getFallbackSchedule(house, interests);
 }
 
-// ============================
-// OWL POST - MAGICAL LETTER STYLING
-// ============================
-
-export async function styleLetter(body: string): Promise<string> {
-  const prompt = `Rewrite this letter in a whimsical, magical Harry Potter style. Keep the core message but add magical flair, wizard terminology, and a charming tone. Keep it roughly the same length.
-
-Original letter:
-"${body}"
-
-Respond with ONLY the rewritten letter text, no JSON, no quotes, no explanation.`;
-
-  const response = await queryOllama(prompt);
-  return response || body;
-}
-
-// ============================
-// FALLBACK TEMPLATES
-// ============================
-
-const FALLBACK_QUESTIONS: Array<{ question: string; options: string[]; weights: Record<string, number[]> }> = [
-  {
-    question: "You find a mysterious, glowing artifact in a forbidden corridor. What do you do?",
-    options: [
-      "Pick it up immediately — adventure awaits!",
-      "Study it carefully from a safe distance first",
-      "Report it to a professor to keep everyone safe",
-      "Consider its potential value and how to use it strategically"
-    ],
-    weights: { Gryffindor: [3, 0, 0, 0], Ravenclaw: [0, 3, 0, 0], Hufflepuff: [0, 0, 3, 0], Slytherin: [0, 0, 0, 3] }
-  },
-  {
-    question: "A friend is being bullied by someone more powerful than you. How do you respond?",
-    options: [
-      "Stand up to the bully directly, no matter the risk",
-      "Devise a clever plan to outsmart the bully",
-      "Rally other friends to support and protect them together",
-      "Find leverage or information to make the bully back down"
-    ],
-    weights: { Gryffindor: [3, 0, 0, 0], Ravenclaw: [0, 3, 0, 0], Hufflepuff: [0, 0, 3, 0], Slytherin: [0, 0, 0, 3] }
-  },
-  {
-    question: "If you could master one magical ability, which would you choose?",
-    options: [
-      "The power to protect others from any danger",
-      "The ability to uncover all hidden knowledge",
-      "A gift for healing and nurturing all living things",
-      "The skill to influence and inspire others to follow your lead"
-    ],
-    weights: { Gryffindor: [3, 0, 0, 0], Ravenclaw: [0, 3, 0, 0], Hufflepuff: [0, 0, 3, 0], Slytherin: [0, 0, 0, 3] }
-  },
-  {
-    question: "You discover your best friend has been secretly breaking an important rule. What do you do?",
-    options: [
-      "Confront them directly and honestly about it",
-      "Research the rule to understand why it exists before deciding",
-      "Talk to them privately and try to understand their reasons",
-      "Assess the situation — is the rule worth following, or is your friend right?"
-    ],
-    weights: { Gryffindor: [3, 0, 0, 0], Ravenclaw: [0, 3, 0, 0], Hufflepuff: [0, 0, 3, 0], Slytherin: [0, 0, 0, 3] }
-  },
-  {
-    question: "What would you most like to be remembered for?",
-    options: [
-      "Acts of great bravery in the face of impossible odds",
-      "Brilliant discoveries that changed how people think",
-      "Being someone everyone could count on, through thick and thin",
-      "Achieving greatness and leaving a lasting legacy"
-    ],
-    weights: { Gryffindor: [3, 0, 0, 0], Ravenclaw: [0, 3, 0, 0], Hufflepuff: [0, 0, 3, 0], Slytherin: [0, 0, 0, 3] }
-  },
-  {
-    question: "You're lost in an enchanted forest at night. What guides you forward?",
-    options: [
-      "Your gut instinct — charge ahead with confidence",
-      "Logic and observation — study the stars and surroundings",
-      "Trust in the forest itself — nature will show the way",
-      "Resourcefulness — use every tool at your disposal"
-    ],
-    weights: { Gryffindor: [3, 0, 0, 0], Ravenclaw: [0, 3, 0, 0], Hufflepuff: [0, 0, 3, 0], Slytherin: [0, 0, 0, 3] }
-  },
-  {
-    question: "A powerful magical creature blocks your path. It can be befriended or defeated. Your approach?",
-    options: [
-      "Face it bravely — you won't back down from a challenge",
-      "Recall everything you've read about this creature's weaknesses",
-      "Approach gently and try to earn its trust with patience",
-      "Negotiate — find what it wants and strike a deal"
-    ],
-    weights: { Gryffindor: [3, 0, 0, 0], Ravenclaw: [0, 3, 0, 0], Hufflepuff: [0, 0, 3, 0], Slytherin: [0, 0, 0, 3] }
-  },
-  {
-    question: "Which potion would you brew first if given unlimited ingredients?",
-    options: [
-      "Felix Felicis — liquid luck for daring adventures",
-      "A potion of infinite knowledge and perfect memory",
-      "A healing elixir to cure any ailment",
-      "Polyjuice Potion — the power to become anyone"
-    ],
-    weights: { Gryffindor: [3, 0, 0, 0], Ravenclaw: [0, 3, 0, 0], Hufflepuff: [0, 0, 3, 0], Slytherin: [0, 0, 0, 3] }
-  },
-  {
-    question: "You've been chosen to lead a group on a dangerous quest. What's your priority?",
-    options: [
-      "Leading from the front and inspiring courage in others",
-      "Planning the route meticulously and preparing for every scenario",
-      "Making sure everyone is included, heard, and taken care of",
-      "Delegating roles strategically to maximize everyone's strengths"
-    ],
-    weights: { Gryffindor: [3, 0, 0, 0], Ravenclaw: [0, 3, 0, 0], Hufflepuff: [0, 0, 3, 0], Slytherin: [0, 0, 0, 3] }
-  },
-  {
-    question: "What draws you to magic most?",
-    options: [
-      "The thrill of the impossible becoming possible",
-      "Unraveling the deep mysteries of how it works",
-      "Its power to help, heal, and bring people together",
-      "The doors it opens and the heights it lets you reach"
-    ],
-    weights: { Gryffindor: [3, 0, 0, 0], Ravenclaw: [0, 3, 0, 0], Hufflepuff: [0, 0, 3, 0], Slytherin: [0, 0, 0, 3] }
-  }
-];
-
-function getFallbackQuestion(questionNumber: number): { question: string; options: string[] } {
-  const q = FALLBACK_QUESTIONS[questionNumber - 1] || FALLBACK_QUESTIONS[0];
-  return { question: q.question, options: q.options };
-}
-
-function fallbackSortingResult(
-  questionsAndAnswers: Array<{ question: string; answer: string }>
-): { house: string; speech: string; traits: string[] } {
-  const scores: Record<string, number> = {
-    Gryffindor: 0,
-    Hufflepuff: 0,
-    Ravenclaw: 0,
-    Slytherin: 0
-  };
-
-  questionsAndAnswers.forEach((qa, i) => {
-    const fallbackQ = FALLBACK_QUESTIONS[i];
-    if (!fallbackQ) return;
-    const optionIndex = fallbackQ.options.indexOf(qa.answer);
-    if (optionIndex === -1) return;
-
-    for (const house of Object.keys(scores)) {
-      scores[house] += fallbackQ.weights[house][optionIndex];
-    }
-  });
-
-  const sortedHouses = Object.entries(scores).sort(([, a], [, b]) => b - a);
-  const house = sortedHouses[0][0];
-
-  const speeches: Record<string, string> = {
-    Gryffindor: "Ah, I see a fire burning bright within you — courage that won't be tamed! Your heart beats with the daring spirit of those who face the unknown head-on. GRYFFINDOR!",
-    Hufflepuff: "What a steadfast soul you are! Your loyalty runs deep as roots, and your kindness is a light in the darkest of times. You belong in HUFFLEPUFF!",
-    Ravenclaw: "A mind as sharp as a well-forged wand! Your thirst for knowledge and love of wisdom set you apart. Welcome to RAVENCLAW!",
-    Slytherin: "I see greatness in you — ambition that reaches for the stars and the cunning to grasp them. You'll do well in SLYTHERIN!"
-  };
-
-  const traitMap: Record<string, string[]> = {
-    Gryffindor: ['brave', 'daring', 'chivalrous'],
-    Hufflepuff: ['loyal', 'kind', 'patient'],
-    Ravenclaw: ['intelligent', 'wise', 'creative'],
-    Slytherin: ['ambitious', 'cunning', 'resourceful']
-  };
-
-  return {
-    house,
-    speech: speeches[house],
-    traits: traitMap[house]
-  };
-}
-
 function getFallbackSchedule(
-  house: string,
-  interests: string[]
+  _house: string,
+  _interests: string[]
 ): Record<string, Array<{ time: string; subject: string; type: string }>> {
-  const baseSchedule: Record<string, Array<{ time: string; subject: string; type: string }>> = {
+  return {
     Monday: [
-      { time: "9:00 AM", subject: "Potions", type: "class" },
-      { time: "10:30 AM", subject: "Charms", type: "class" },
-      { time: "1:00 PM", subject: "Defense Against the Dark Arts", type: "class" },
-      { time: "3:00 PM", subject: "Study Period", type: "study" },
-      { time: "4:30 PM", subject: "Dueling Club", type: "club" }
+      { time: "9:00 AM", subject: "Potions & Sparkles", type: "class" },
+      { time: "10:30 AM", subject: "Charms & Wandwork", type: "class" },
+      { time: "1:00 PM", subject: "Defense Against Dark Arts", type: "class" },
+      { time: "3:00 PM", subject: "Magical Study Corner", type: "study" },
+      { time: "4:30 PM", subject: "Dueling & Broomstick Club", type: "club" }
     ],
     Tuesday: [
       { time: "9:00 AM", subject: "Transfiguration", type: "class" },
-      { time: "10:30 AM", subject: "Herbology", type: "class" },
+      { time: "10:30 AM", subject: "Herbology in the Greenhouses", type: "class" },
       { time: "1:00 PM", subject: "History of Magic", type: "class" },
-      { time: "3:00 PM", subject: "Library Research", type: "study" },
-      { time: "4:30 PM", subject: "Free Period", type: "free" }
+      { time: "3:00 PM", subject: "Great Hall Cozy Study", type: "study" },
+      { time: "4:30 PM", subject: "Butterbeer Social Hour", type: "free" }
     ],
     Wednesday: [
-      { time: "9:00 AM", subject: "Charms", type: "class" },
-      { time: "10:30 AM", subject: "Potions", type: "class" },
+      { time: "9:00 AM", subject: "Charms Masterclass", type: "class" },
+      { time: "10:30 AM", subject: "Advanced Potions", type: "class" },
       { time: "1:00 PM", subject: "Care of Magical Creatures", type: "class" },
-      { time: "3:00 PM", subject: "Study Group", type: "study" },
-      { time: "4:30 PM", subject: "Quidditch Practice", type: "club" }
+      { time: "3:00 PM", subject: "Spell Practice Circle", type: "study" },
+      { time: "4:30 PM", subject: "Quidditch Flight Practice", type: "club" }
     ],
     Thursday: [
-      { time: "9:00 AM", subject: "Defense Against the Dark Arts", type: "class" },
-      { time: "10:30 AM", subject: "Transfiguration", type: "class" },
-      { time: "1:00 PM", subject: "Arithmancy", type: "class" },
-      { time: "3:00 PM", subject: "Free Period", type: "free" },
-      { time: "4:30 PM", subject: "Astronomy Club", type: "club" }
+      { time: "9:00 AM", subject: "Defense Against Dark Arts", type: "class" },
+      { time: "10:30 AM", subject: "Transfiguration Secrets", type: "class" },
+      { time: "1:00 PM", subject: "Arithmancy & Number Magic", type: "class" },
+      { time: "3:00 PM", subject: "Enchanted Courtyard Break", type: "free" },
+      { time: "4:30 PM", subject: "Stargazing & Astronomy Club", type: "club" }
     ],
     Friday: [
-      { time: "9:00 AM", subject: "Herbology", type: "class" },
-      { time: "10:30 AM", subject: "History of Magic", type: "class" },
-      { time: "1:00 PM", subject: "Study Period", type: "study" },
-      { time: "3:00 PM", subject: "House Meeting", type: "club" },
-      { time: "11:30 PM", subject: "Astronomy", type: "class" }
+      { time: "9:00 AM", subject: "Herbology & Mandrake Care", type: "class" },
+      { time: "10:30 AM", subject: "Magical Lore & Legends", type: "class" },
+      { time: "1:00 PM", subject: "Library Archive Exploration", type: "study" },
+      { time: "3:00 PM", subject: "House Unity Gathering", type: "club" },
+      { time: "11:00 PM", subject: "Midnight Astronomy at Astronomy Tower", type: "class" }
     ]
   };
-
-  return baseSchedule;
 }
 
-// ============================
-// OLLAMA HEALTH CHECK
-// ============================
+export async function styleLetter(body: string): Promise<string> {
+  try {
+    const prompt = `Rewrite this letter in a whimsical, magical Harry Potter style. Keep the core message but add magical flair, wizard terminology, and a charming tone. Keep it roughly the same length.
+Original letter: "${body}"
+Respond with ONLY the rewritten text, no commentary.`;
+    const res = await queryOllama(prompt);
+    if (res) return res.trim();
+  } catch {
+    // fallback
+  }
+  return `By the flutter of owl wings, I send this dispatch: "${body}" May your wand stay true! ⚡`;
+}
 
 export async function checkOllamaHealth(): Promise<boolean> {
   try {
-    const response = await fetch(`${OLLAMA_BASE_URL}/api/tags`);
-    return response.ok;
+    const res = await fetchWithTimeout(`${OLLAMA_BASE_URL}/api/tags`, {}, 800);
+    return res.ok;
   } catch {
     return false;
   }

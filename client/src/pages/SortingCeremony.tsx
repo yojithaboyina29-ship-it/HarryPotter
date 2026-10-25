@@ -69,7 +69,7 @@ export default function SortingCeremony() {
   const [submitting, setSubmitting] = useState(false);
   const [displayedText, setDisplayedText] = useState('');
 
-  // Typewriter effect
+  // Fast typewriter effect (6ms)
   const typeText = useCallback((text: string) => {
     setDisplayedText('');
     let i = 0;
@@ -77,7 +77,7 @@ export default function SortingCeremony() {
       setDisplayedText(text.slice(0, i + 1));
       i++;
       if (i >= text.length) clearInterval(timer);
-    }, 25);
+    }, 8);
     return () => clearInterval(timer);
   }, []);
 
@@ -202,14 +202,14 @@ export default function SortingCeremony() {
             <div className="w-full max-w-2xl grid grid-cols-1 sm:grid-cols-2 gap-3">
               {currentQ.options.map((option, i) => (
                 <motion.button key={option}
-                  initial={{ opacity: 0, y: 15 }}
+                  initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.8 + i * 0.1 }}
+                  transition={{ delay: i * 0.05 }}
                   onClick={() => submitAnswer(option)}
                   disabled={submitting}
-                  whileHover={{ scale: 1.02, boxShadow: '0 0 20px rgba(212,175,55,0.2)' }}
+                  whileHover={{ scale: 1.02, boxShadow: '0 0 20px rgba(212,175,55,0.25)' }}
                   whileTap={{ scale: 0.98 }}
-                  className="text-left px-5 py-4 rounded-xl border transition-all duration-200 text-sm disabled:opacity-50"
+                  className="text-left px-5 py-4 rounded-xl border transition-all duration-150 text-sm disabled:opacity-50 cursor-pointer"
                   style={{
                     backgroundColor: 'var(--color-surface-light)',
                     borderColor: 'rgba(212,175,55,0.2)',
