@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
 import { getDb, saveDb } from '../db/connection';
 import { AuthRequest, authMiddleware } from '../middleware/auth';
-import { generateSortingQuestion, determineSortingResult } from '../services/ai';
+import { generateSortingQuestion, determineSortingResult, pickRandomQuestionSet } from '../services/ai';
 import { awardPoints, POINT_VALUES } from '../services/points';
 
 const router = Router();
@@ -40,13 +40,14 @@ router.post('/start', authMiddleware, async (req: AuthRequest, res: Response): P
       sessionStmt.free();
     }
 
-    // Generate first question
-    const firstQuestion = await generateSortingQuestion(1, []);
+    // Pick 5 unique, randomized questions from pool for this user
+    const selectedQuestions = pickRandomQuestionSet();
+    const firstQuestion = selectedQuestions[0];
 
-    // Create session
+    // Create session storing the 5 selected questions for this user
     db.run(
       'INSERT INTO sorting_sessions (user_id, questions, answers) VALUES (?, ?, ?)',
-      [userId, JSON.stringify([firstQuestion]), '[]']
+      [userId, JSON.stringify(selectedQuestions), '[]']
     );
     saveDb();
 
@@ -117,19 +118,13 @@ router.post('/answer', authMiddleware, async (req: AuthRequest, res: Response): 
     const currentQuestionNumber = answers.length;
 
     if (currentQuestionNumber < 5) {
-      // Generate next question
-      const previousQA = questions.map((q, i) => ({
-        question: q.question,
-        answer: answers[i] || ''
-      })).filter((_, i) => i < answers.length);
+      // Pick next question from user's unique pre-assigned set (or fallback)
+      const nextQuestion = questions[currentQuestionNumber] || await generateSortingQuestion(currentQuestionNumber + 1, []);
 
-      const nextQuestion = await generateSortingQuestion(currentQuestionNumber + 1, previousQA);
-      questions.push(nextQuestion);
-
-      // Update session
+      // Update session answers
       db.run(
-        'UPDATE sorting_sessions SET questions = ?, answers = ? WHERE id = ?',
-        [JSON.stringify(questions), JSON.stringify(answers), actualSessionId]
+        'UPDATE sorting_sessions SET answers = ? WHERE id = ?',
+        [JSON.stringify(answers), actualSessionId]
       );
       saveDb();
 
