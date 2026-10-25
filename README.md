@@ -10,15 +10,10 @@
 ---
 
 ## 👥 Team Details
-- **Team Name**: *Marauders of Innovation* (or your Team Name)
+- **Team Name**: Team Gynfrindor
 - **Members**:
-  1. **Member 1**: Full Stack Lead & AI Integration
-  2. **Member 2**: Frontend & UI/UX Design (Framer Motion, Theme)
-  3. **Member 3**: Backend Architecture & Points Ledger System
-  4. **Member 4**: Database Design, Testing & Compliance
-
-*(You can replace the member names above with your actual team member names).*
-
+  1. **Member 1**: Yojitha Boyina
+  2. **Member 2**: Sudhishna Mallavarapu
 ---
 
 ## 🎯 Problem Statement
