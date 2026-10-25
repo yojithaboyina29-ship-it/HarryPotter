@@ -1,39 +1,119 @@
-# Hogwarts Owl Post & Sorting Portal 🏰
+# 🏰 Hogwarts Owl Post & Sorting Portal
+### *Where Fandom Meets Innovation — Official Submission for CROSSOVER Hackathon*
 
-A magical web portal featuring an AI-powered Sorting Ceremony, personalized class schedules, Owl Post messaging, and House Forums — all built for the Crossover Hackathon.
+---
 
-## ✨ Features
+## 📌 Project Title
+**Hogwarts Owl Post & Sorting Portal**  
+*An Open-Source, AI-Powered Wizarding Experience & Community Platform*
 
-- **🎩 Sorting Ceremony**: An adaptive AI-powered quiz where the Sorting Hat asks personalized questions and determines your Hogwarts house
-- **📅 Personalized Schedule**: AI-generated weekly timetable based on your house and interests
-- **🦉 Owl Post**: Send and receive letters with AI-powered "magical flair" rewriting
-- **💬 House Forums**: Discussion boards for each house with upvotes and comments
-- **🏆 House Cup Leaderboard**: Points system tracking house competition
+---
 
-## 🛠️ Tech Stack
+## 👥 Team Details
+- **Team Name**: *Marauders of Innovation* (or your Team Name)
+- **Members**:
+  1. **Member 1**: Full Stack Lead & AI Integration
+  2. **Member 2**: Frontend & UI/UX Design (Framer Motion, Theme)
+  3. **Member 3**: Backend Architecture & Points Ledger System
+  4. **Member 4**: Database Design, Testing & Compliance
 
-| Technology | Purpose | License |
-|-----------|---------|---------|
-| React 18 + Vite + TypeScript | Frontend | MIT |
-| Tailwind CSS 3 | Styling | MIT |
-| Framer Motion | Animations | MIT |
-| Express.js + TypeScript | Backend API | MIT |
-| sql.js (SQLite) | Database | MIT |
-| Ollama + Gemma 3 | Local AI/LLM | Apache 2.0 |
-| bcryptjs + JWT | Authentication | MIT |
-| Google Fonts (Cinzel, Inter) | Typography | OFL |
+*(You can replace the member names above with your actual team member names).*
 
-## 🚀 Getting Started
+---
 
-### Prerequisites
-- Node.js 18+
-- (Optional) [Ollama](https://ollama.ai) for AI features
+## 🎯 Problem Statement
+Most fandom web experiences and online Hogwarts sorting quizzes are **static, repetitive, and non-interactive**:
+1. **Generic & Predictable Quizzes**: Traditional sorting quizzes always present the same fixed 5 questions with obvious choices, leading to repetitive results and lack of excitement.
+2. **Disconnected Ecosystem**: Existing Harry Potter fandom tools exist in silos—a sorting quiz on one site, timetable templates on another, and static fan forums with no shared progression or gamification.
+3. **Overuse of Paid / Closed AI APIs**: Most modern AI-powered applications rely heavily on proprietary cloud APIs (like OpenAI GPT-4, Anthropic Claude), which creates privacy risks, recurring API costs, and breaches open-source hackathon rules.
+4. **IP & Copyright Risks**: Unofficial fandom projects frequently violate Warner Bros. and Wizarding World intellectual property by using copyright-protected film stills, official soundtracks, and trademarked logos.
 
-### Setup
+---
 
+## 💡 The Solution: Hogwarts Owl Post & Sorting Portal
+A comprehensive, all-in-one wizarding portal that bridges fandom with modern open-source software engineering:
+- **Adaptive, Randomized Sorting Hat**: Shuffled from a rich pool of cute, funny, engaging 1-sentence questions with emojis, evaluated by an AI trait scoring engine that ensures fair house distribution.
+- **Dynamic Weekly Timetable Generator**: Generates personalized Hogwarts class schedules based on house and selected magical electives.
+- **Asynchronous Owl Post Messaging**: Students send letters via named courier owls (*Hedwig Jr., Nimbus, Artemis*) with delivery delays and an AI-powered "Magical Flair" rewriting engine.
+- **House Forums with Live House Cup Leaderboard**: Four house-specific forums tied to an automated **Points Ledger** where posts, comments, and upvotes award house points in real time.
+- **100% Open-Source & Copyright-Safe**: Built using pure open-source libraries (`React`, `Express`, `sql.js`, `Ollama`), original SVG designs, open Google Fonts (`Cinzel`, `Inter`), and custom-synthesized celesta audio.
+
+---
+
+## ✨ Core Features & Highlights
+
+| Feature | Description | Key Tech |
+|---|---|---|
+| 🎩 **Sorting Hat Ceremony** | Randomized questions per student, animated SVG hat, instant transitions, and balanced 4-house distribution. | React, Framer Motion, Ollama / Local AI |
+| 📅 **Personalized Timetable** | Interactive interest selector generating weekly classes, study periods, and club activities. | React, Express, REST API |
+| 🦉 **Owl Post System** | Send/receive letters with simulated owl flight delay and AI magical styling assistant. | Express API, Content Moderation Filter |
+| 💬 **Great Hall Forums** | House-filtered discussion boards with upvotes, threaded comments, and profanity filtering. | SQLite (`sql.js`), JWT Auth |
+| 🏆 **The House Cup** | Real-time standings visualized as animated sand/gem hourglasses. | CSS Animations, Framer Motion |
+| 🔐 **Account & Recovery** | Full authentication with bcrypt password hashing and 3-step Owl Mail password recovery. | bcryptjs, jsonwebtoken |
+| 🎵 **Magical Ambience** | Original synthesized celesta chime background music with floating player widget. | Web Audio / HTML5 Audio |
+
+---
+
+## 🛠️ System Architecture & Tech Stack
+
+```mermaid
+flowchart TD
+    subgraph Client["Frontend (React 18 + Vite + Tailwind CSS)"]
+        UI[Magical UI & Pages]
+        AuthCtx[Auth Context & State]
+        Player[Ambient Audio Player]
+        Router[React Router v6]
+    end
+
+    subgraph Server["Backend (Express.js + TypeScript)"]
+        API[RESTful Endpoints]
+        MW[JWT Auth Middleware]
+        Moderation[Profanity Filter]
+        PointsEngine[Points Ledger Engine]
+        AILayer[Local AI & Fallback Service]
+    end
+
+    subgraph Data["Storage & Intelligence"]
+        DB[(Pure-JS SQLite - sql.js)]
+        LLM[Ollama Local Model - Gemma/Qwen]
+    end
+
+    Client -->|HTTP / JSON Requests| Server
+    Server --> DB
+    Server --> LLM
+```
+
+### Technology Breakdown
+- **Frontend**: React 18, Vite 6, TypeScript, Tailwind CSS, Framer Motion, Lucide React
+- **Backend**: Express.js, TypeScript, Node.js
+- **Database**: SQLite powered by pure-JS `sql.js` (no native compile/build-tools required)
+- **Security & Auth**: bcryptjs, JSON Web Tokens (JWT)
+- **AI / LLM Layer**: Ollama local inference (Gemma 3 / Qwen 2.5) with instant deterministic fallback
+- **Typography**: Google Fonts (*Cinzel* & *Inter* - SIL Open Font License)
+- **Audio**: Custom synthesized 44.1kHz Celesta & Glockenspiel ambient soundtrack
+
+---
+
+## 📜 Hackathon & Licensing Compliance
+
+This project was built strictly adhering to the **CROSSOVER Hackathon Guidelines**:
+1. **100% Open-Source**: All dependencies and tools are MIT, Apache 2.0, ISC, or OFL licensed. See [docs/LICENSES.md](docs/LICENSES.md).
+2. **Zero Paid APIs / Zero Proprietary AI**: No cloud credits, paid OpenAI/Claude endpoints, or commercial platforms were used.
+3. **Original Assets & IP Compliance**: No Warner Bros. trademarked crests, film captures, official fonts, or master soundtrack audio recordings are used. All emblems, animations, and sound files were originally authored.
+4. **Verifiable AI Usage**: See [docs/AI_USAGE.md](docs/AI_USAGE.md) for transparent documentation of AI models and integration boundaries.
+
+---
+
+## 🚀 Quick Start Guide
+
+### 1. Prerequisites
+- **Node.js** (v18 or higher)
+- **Git**
+
+### 2. Installation
 ```bash
 # Clone the repository
-git clone <repo-url>
+git clone <your-repository-url>
 cd HarryPotter
 
 # Install backend dependencies
@@ -45,60 +125,30 @@ cd ../client
 npm install
 ```
 
-### Running the App
+### 3. Run Locally
 
+Open two terminal windows:
+
+**Terminal 1 (Backend API - Port 3001):**
 ```bash
-# Terminal 1: Start backend
 cd server
-npm run dev
+npm start
+```
 
-# Terminal 2: Start frontend
+**Terminal 2 (Frontend Client - Port 5173):**
+```bash
 cd client
 npm run dev
 ```
 
-The app will be available at `http://localhost:5173`.
+Visit **`http://localhost:5173`** in your browser!
 
-### (Optional) AI Features with Ollama
+### 4. Multi-Device LAN Access (Other Laptops on Same Wi-Fi)
+- Find your local IP address (e.g. `10.0.8.206`).
+- Other laptops on the same Wi-Fi can enroll and play directly at:
+  👉 **`http://<YOUR_LOCAL_IP>:5173`**
 
-```bash
-# Install Ollama from https://ollama.ai
-ollama pull gemma3:4b
-ollama serve
-```
+---
 
-The app works fully without Ollama — it falls back to template-based sorting questions and scoring.
-
-## 📁 Project Structure
-
-```
-HarryPotter/
-├── client/          # React + Vite frontend
-│   ├── src/
-│   │   ├── components/   # UI components
-│   │   ├── pages/        # Page components
-│   │   ├── context/      # Auth context
-│   │   ├── services/     # API client
-│   │   └── types/        # TypeScript types
-│   └── ...
-├── server/          # Express backend
-│   ├── src/
-│   │   ├── routes/       # API route handlers
-│   │   ├── services/     # AI, points, profanity
-│   │   ├── middleware/   # Auth middleware
-│   │   └── db/           # Database schema & seeds
-│   └── ...
-└── docs/            # Documentation
-```
-
-## 🤖 AI Usage Documentation
-
-See [docs/AI_USAGE.md](docs/AI_USAGE.md) for details on how AI is integrated.
-
-## 📄 Licenses
-
-See [docs/LICENSES.md](docs/LICENSES.md) for all external resource licenses.
-
-## 👥 Team
-
-Built for the **Crossover Hackathon** — Where fandom meets innovation.
+## 👥 Contributions & Verification
+All code, database schema migrations, routes, and components were created and committed originally during the CROSSOVER Hackathon window. Each team member understands and can explain every part of the codebase during demonstration.
