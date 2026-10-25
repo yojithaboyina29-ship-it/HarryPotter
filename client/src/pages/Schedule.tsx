@@ -36,10 +36,14 @@ export default function Schedule() {
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState('');
 
+  const houseName = user?.house_name || user?.house;
+
   // Redirect if not sorted
   useEffect(() => {
-    if (!loading && user && !user.house_name) navigate('/sorting');
-  }, [user, loading, navigate]);
+    if (!loading && user && !houseName) {
+      navigate('/sorting');
+    }
+  }, [user, loading, houseName, navigate]);
 
   useEffect(() => {
     scheduleApi.get()
@@ -83,10 +87,10 @@ export default function Schedule() {
           <h1 className="text-3xl font-heading font-bold" style={{ color: 'var(--color-accent)' }}>
             📅 Your Timetable
           </h1>
-          {user?.house_name && (
+          {houseName && (
             <div className="flex items-center gap-2 mt-2">
               <span style={{ color: 'var(--color-text-secondary)' }} className="text-sm">House:</span>
-              <HouseBadge house={user.house_name} size="md" />
+              <HouseBadge house={houseName} size="md" />
             </div>
           )}
         </div>

@@ -81,17 +81,32 @@ router.post('/answer', authMiddleware, async (req: AuthRequest, res: Response): 
     }
 
     // Load session
+    const parsedSessionId = typeof sessionId === 'string' ? parseInt(sessionId, 10) : sessionId;
     const sessionStmt = db.prepare(
       'SELECT * FROM sorting_sessions WHERE id = ? AND user_id = ? AND completed = 0'
     );
-    sessionStmt.bind([sessionId, userId]);
+    sessionStmt.bind([parsedSessionId, userId]);
     if (!sessionStmt.step()) {
       sessionStmt.free();
-      res.status(404).json({ error: 'Active sorting session not found' });
-      return;
+      // Check if user has ANY active session for convenience
+      const anyStmt = db.prepare('SELECT * FROM sorting_sessions WHERE user_id = ? AND completed = 0 ORDER BY id DESC LIMIT 1');
+      anyStmt.bind([userId]);
+      if (anyStmt.step()) {
+        const fallbackSession = anyStmt.getAsObject() as any;
+        anyStmt.free();
+        // Proceed with user's latest active session
+        var session = fallbackSession;
+        var actualSessionId = fallbackSession.id;
+      } else {
+        anyStmt.free();
+        res.status(404).json({ error: 'Active sorting session not found. Please click Try Again to restart the ceremony.' });
+        return;
+      }
+    } else {
+      var session = sessionStmt.getAsObject() as any;
+      var actualSessionId = parsedSessionId;
+      sessionStmt.free();
     }
-    const session = sessionStmt.getAsObject() as any;
-    sessionStmt.free();
 
     const questions: Array<{ question: string; options: string[] }> = JSON.parse(session.questions);
     const answers: string[] = JSON.parse(session.answers);
@@ -114,12 +129,12 @@ router.post('/answer', authMiddleware, async (req: AuthRequest, res: Response): 
       // Update session
       db.run(
         'UPDATE sorting_sessions SET questions = ?, answers = ? WHERE id = ?',
-        [JSON.stringify(questions), JSON.stringify(answers), sessionId]
+        [JSON.stringify(questions), JSON.stringify(answers), actualSessionId]
       );
       saveDb();
 
       res.json({
-        sessionId,
+        sessionId: actualSessionId,
         questionNumber: currentQuestionNumber + 1,
         totalQuestions: 5,
         question: nextQuestion.question,
@@ -144,7 +159,7 @@ router.post('/answer', authMiddleware, async (req: AuthRequest, res: Response): 
       // Update session as completed
       db.run(
         'UPDATE sorting_sessions SET questions = ?, answers = ?, result_house = ?, hat_speech = ?, completed = 1 WHERE id = ?',
-        [JSON.stringify(questions), JSON.stringify(answers), result.house, result.speech, sessionId]
+        [JSON.stringify(questions), JSON.stringify(answers), result.house, result.speech, actualSessionId]
       );
 
       // Update user's house

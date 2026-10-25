@@ -10,6 +10,7 @@ import OwlPost from './pages/OwlPost';
 import Forum from './pages/Forum';
 import Leaderboard from './pages/Leaderboard';
 import LoadingSpinner from './components/ui/LoadingSpinner';
+import AudioPlayer from './components/ui/AudioPlayer';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -36,6 +37,7 @@ function AppRoutes() {
         <Route path="/leaderboard" element={<Leaderboard />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      <AudioPlayer />
     </div>
   );
 }

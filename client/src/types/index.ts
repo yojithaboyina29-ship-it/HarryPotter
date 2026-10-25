@@ -3,7 +3,9 @@ export interface User {
   username: string;
   email: string;
   house_id: number | null;
+  houseId?: number | null;
   house_name?: string;
+  house?: string;
   sorting_reason?: string;
   avatar_url?: string;
 }

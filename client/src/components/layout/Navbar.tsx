@@ -51,7 +51,7 @@ export default function Navbar() {
           <div className="hidden md:flex items-center gap-3">
             {user ? (
               <>
-                {user.house_name && <HouseBadge house={user.house_name} />}
+                {(user.house_name || user.house) && <HouseBadge house={(user.house_name || user.house)!} />}
                 <span className="text-sm flex items-center gap-1" style={{ color: 'var(--color-text-secondary)' }}>
                   <User className="w-4 h-4" />{user.username}
                 </span>

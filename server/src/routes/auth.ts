@@ -103,8 +103,11 @@ router.post('/login', async (req: AuthRequest, res: Response): Promise<void> => 
         username: user.username,
         email: user.email,
         house: user.house_name || null,
+        house_name: user.house_name || null,
         houseId: user.house_id || null,
+        house_id: user.house_id || null,
         sortingReason: user.sorting_reason || null,
+        sorting_reason: user.sorting_reason || null,
         avatarUrl: user.avatar_url || null,
         createdAt: user.created_at
       }
@@ -144,8 +147,11 @@ router.get('/me', authMiddleware, (req: AuthRequest, res: Response): void => {
         username: user.username,
         email: user.email,
         house: user.house_name || null,
+        house_name: user.house_name || null,
         houseId: user.house_id || null,
+        house_id: user.house_id || null,
         sortingReason: user.sorting_reason || null,
+        sorting_reason: user.sorting_reason || null,
         avatarUrl: user.avatar_url || null,
         createdAt: user.created_at
       }
